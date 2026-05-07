@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>うちのAI studio</title>
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #0a0d12;
+  min-height: 100vh;
+  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  color: #f0f6fc;
+}
+
+.layout {
+  display: flex;
+  gap: 20px;
+  height: 100vh;
+  padding: 20px;
+}
+
+/* ============ editor ============ */
+
+.editor {
+  flex: 0 0 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.editor-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.editor h1 {
+  margin: 0;
+  font-size: 14px;
+  color: #8b949e;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.x-link {
+  font-size: 13px;
+  color: #f0f6fc;
+  text-decoration: none;
+  font-family: 'Hiragino Sans', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.x-link:hover { color: #58a6ff; }
+
+.controls {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.controls select,
+.controls button {
+  background: #21262d;
+  color: #f0f6fc;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.controls button.primary {
+  background: #238636;
+  color: #fff;
+  border-color: #2ea043;
+  font-weight: 600;
+}
+.controls button.primary:hover { background: #2ea043; }
+
+.editor textarea {
+  flex: 1;
+  background: #161b22;
+  color: #f0f6fc;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 14px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+  min-height: 0;
+}
+
+.editor textarea:focus { border-color: #58a6ff; }
+
+.help {
+  font-size: 11px;
+  color: #6e7681;
+  line-height: 1.6;
+  background: #161b22;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #21262d;
+}
+
+.help code {
+  background: #21262d;
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: #7ee787;
+}
+
+/* ============ terminal ============ */
+
+.terminal-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.terminal {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 16px;
+  aspect-ratio: 9 / 16;
+  height: min(95vh, 1100px);
+  max-width: 100%;
+  box-shadow: 0 20px 80px rgba(0,0,0,0.6);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.intro-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #0a0d12 0%, #161b22 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  padding: 40px;
+  font-family: 'Hiragino Maru Gothic ProN', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+}
+
+.intro-overlay.visible { opacity: 1; }
+
+.intro-text {
+  font-size: 26px;
+  color: rgba(240, 246, 252, 0.92);
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  line-height: 1.9;
+  white-space: pre-line;
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(8px);
+  transition: opacity 0.8s ease, filter 0.8s ease, transform 0.8s ease;
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.18), 0 0 36px rgba(126, 231, 135, 0.12);
+}
+
+.intro-text.show {
+  opacity: 1;
+  filter: blur(0);
+  transform: translateY(0);
+}
+
+.titlebar {
+  background: #21262d;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #30363d;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.dots { display: flex; gap: 6px; z-index: 1; }
+.dot { width: 11px; height: 11px; border-radius: 50%; }
+.dot.red { background: #ff5f56; }
+.dot.yellow { background: #ffbd2e; }
+.dot.green { background: #27c93f; }
+
+.title {
+  color: #8b949e;
+  font-size: 12px;
+  font-weight: 500;
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
+}
+
+.history {
+  flex: 1;
+  padding: 24px 22px 16px;
+  color: #f0f6fc;
+  font-size: 19px;
+  line-height: 1.65;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.history::-webkit-scrollbar { width: 0; }
+
+.history-inner { display: flex; flex-direction: column; }
+
+.line { margin: 0; white-space: pre-wrap; word-wrap: break-word; }
+.line.user { color: #f0f6fc; }
+.line.user::before { content: '> '; color: #7ee787; }
+.line.ai { color: #f0f6fc; margin-bottom: 16px; }
+
+.input-area {
+  padding: 16px 22px 18px;
+  border-top: 1px solid #30363d;
+  background: #0d1117;
+  font-size: 19px;
+  color: #f0f6fc;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 64px;
+  transition: background 0.12s;
+}
+
+.input-area.flash { background: #1c2a3a; }
+.input-prompt { color: #7ee787; margin-right: 8px; }
+.input-text { white-space: pre; }
+
+.input-cursor {
+  display: inline-block;
+  width: 10px;
+  height: 22px;
+  background: #7ee787;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  animation: blink 1s steps(2) infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.editor.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ============ Editor pane ============ -->
+  <div class="editor" id="editor">
+    <div class="editor-header">
+      <h1>うちのAI studio</h1>
+      <a class="x-link" href="https://x.com/nekotoahiru2026" target="_blank" rel="noopener">製作: @nekotoahiru2026 ↗</a>
+    </div>
+    <div class="controls">
+      <select id="sampleSelect">
+        <option value="">サンプルを読み込む…</option>
+      </select>
+      <button id="playBtn" class="primary">▶ 再生</button>
+      <button id="copyBtn">コピー</button>
+      <button id="hideBtn" title="hキーでも切替">隠す</button>
+    </div>
+    <textarea id="dsl" spellcheck="false"></textarea>
+    <div class="help">
+      <code>title:</code> タイトル<br>
+      <code>intro:</code> 前置き思考（複数行OK）<br>
+      <code>&gt; 質問</code> ユーザー入力<br>
+      <code>応答</code> （&gt;の次の行）<br>
+      <code>outro:</code> ツッコミ（Enter押さず固まる）<br>
+      空行で区切ると見やすい
+    </div>
+  </div>
+
+  <!-- ============ Terminal preview ============ -->
+  <div class="terminal-wrapper">
+    <div class="terminal">
+      <div class="intro-overlay" id="introOverlay">
+        <div class="intro-text" id="introText"></div>
+      </div>
+      <div class="titlebar">
+        <div class="dots">
+          <div class="dot red"></div>
+          <div class="dot yellow"></div>
+          <div class="dot green"></div>
+        </div>
+        <div class="title" id="title">~@nekotoahiru2026</div>
+      </div>
+      <div class="history" id="history">
+        <div class="history-inner" id="historyInner"></div>
+      </div>
+      <div class="input-area" id="inputArea">
+        <span class="input-prompt">&gt;</span>
+        <span class="input-text" id="inputText"></span>
+        <span class="input-cursor"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============ タイミング設定 ============
+
+const TYPING_SPEED_USER = 90;
+const TYPING_SPEED_AI = 65;
+const DELAY_BEFORE_TYPING = 500;
+const DELAY_BEFORE_ENTER = 450;
+const DELAY_AFTER_ENTER = 300;
+const DELAY_AFTER_AI = 1100;
+const DELAY_LOOP_RESTART = 2500;
+const LOOP = true;
+
+const INTRO_FADE_IN = 800;
+const INTRO_HOLD = 1300;
+const INTRO_FADE_OUT = 500;
+const INTRO_BEFORE_TERMINAL = 350;
+
+const OUTRO_BEFORE = 700;
+const OUTRO_TYPING_SPEED = 150;
+const OUTRO_HOLD = 2500;
+
+// ============ サンプルDSL ============
+
+const SAMPLES = {
+  'shinratsu-hayaoki': {
+    label: '辛辣すぎ × 早起き',
+    dsl: `title: ~@nekotoahiru2026
+
+intro: 朝、起きられないなぁ
+intro: AIに相談してみよっと
+
+> 起きれない
+起きてください
+
+> 体が動かない
+動かしてください
+
+> 無理
+じゃあ寝てください
+
+outro: えっ、、、、`
+  },
+  'kawaii-tsukareta': {
+    label: '可愛すぎ × 疲れた',
+    dsl: `title: ~@nekotoahiru2026
+
+intro: なんか、疲れたなぁ
+intro: AIに話してみるか
+
+> 疲れた
+今日もおつかれさまです
+
+> 何もしてないのに
+えらいです
+
+> 何が
+生きてること
+
+outro: …`
+  },
+  'shinratsu-yaruki': {
+    label: '辛辣すぎ × やる気でない',
+    dsl: `title: ~@nekotoahiru2026
+
+intro: やる気、ないなぁ
+intro: AIに相談しよ
+
+> やる気でない
+出してください
+
+> 出ない
+知りません
+
+> 助けて
+状況を述べてください
+
+outro: えっ`
+  },
+};
+
+// ============ DSLパーサー ============
+
+function parseDSL(text) {
+  const story = {
+    TITLE: '~@nekotoahiru2026',
+    intro: [],
+    CONVERSATION: [],
+    outro: undefined,
+  };
+  const lines = text.split('\n');
+  let waitingForAi = false;
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (!line.trim()) {
+      waitingForAi = false;
+      continue;
+    }
+    const trimmed = line.trim();
+    if (trimmed.startsWith('title:')) {
+      story.TITLE = trimmed.slice(6).trim();
+      waitingForAi = false;
+    } else if (trimmed.startsWith('intro:')) {
+      story.intro.push(trimmed.slice(6).trim());
+      waitingForAi = false;
+    } else if (trimmed.startsWith('outro:')) {
+      story.outro = trimmed.slice(6).trim();
+      waitingForAi = false;
+    } else if (trimmed.startsWith('>')) {
+      story.CONVERSATION.push({ speaker: 'user', text: trimmed.slice(1).trim() });
+      waitingForAi = true;
+    } else if (waitingForAi) {
+      story.CONVERSATION.push({ speaker: 'ai', text: trimmed });
+      waitingForAi = false;
+    }
+  }
+  return story;
+}
+
+// ============ 再生ロジック ============
+
+const titleEl = document.getElementById('title');
+const history = document.getElementById('history');
+const historyInner = document.getElementById('historyInner');
+const inputArea = document.getElementById('inputArea');
+const inputText = document.getElementById('inputText');
+const introOverlay = document.getElementById('introOverlay');
+const introText = document.getElementById('introText');
+
+const delay = (ms) => new Promise(r => setTimeout(r, ms));
+const scrollBottom = () => { history.scrollTop = history.scrollHeight; };
+
+let runId = 0;
+
+async function typeInInput(text, speed) {
+  inputText.textContent = '';
+  for (const ch of text) {
+    inputText.textContent += ch;
+    await delay(speed);
+  }
+}
+
+function commitInput(text) {
+  const el = document.createElement('div');
+  el.className = 'line user';
+  el.textContent = text;
+  historyInner.appendChild(el);
+  scrollBottom();
+  inputText.textContent = '';
+  inputArea.classList.add('flash');
+  setTimeout(() => inputArea.classList.remove('flash'), 120);
+}
+
+async function typeAiResponse(text, speed) {
+  const el = document.createElement('div');
+  el.className = 'line ai';
+  historyInner.appendChild(el);
+  scrollBottom();
+  for (const ch of text) {
+    el.textContent += ch;
+    scrollBottom();
+    await delay(speed);
+  }
+}
+
+function clearHistory() {
+  historyInner.innerHTML = '';
+  inputText.textContent = '';
+}
+
+async function playIntro(lines, myId) {
+  if (!Array.isArray(lines) || lines.length === 0) return;
+  introText.classList.remove('show');
+  introText.textContent = lines.join('\n');
+  introOverlay.classList.add('visible');
+  await delay(300);
+  if (myId !== runId) return;
+  void introText.offsetWidth;
+  introText.classList.add('show');
+  await delay(INTRO_FADE_IN + INTRO_HOLD);
+  if (myId !== runId) return;
+  introText.classList.remove('show');
+  await delay(INTRO_FADE_OUT);
+  introOverlay.classList.remove('visible');
+  await delay(INTRO_BEFORE_TERMINAL);
+}
+
+async function runConversation(story) {
+  const myId = ++runId;
+  titleEl.textContent = story.TITLE || '~@nekotoahiru2026';
+  while (true) {
+    if (myId !== runId) return;
+    clearHistory();
+    await playIntro(story.intro, myId);
+    if (myId !== runId) return;
+    await delay(DELAY_BEFORE_TYPING);
+    for (const turn of story.CONVERSATION) {
+      if (myId !== runId) return;
+      if (turn.speaker === 'user') {
+        await typeInInput(turn.text, TYPING_SPEED_USER);
+        if (myId !== runId) return;
+        await delay(DELAY_BEFORE_ENTER);
+        commitInput(turn.text);
+        await delay(DELAY_AFTER_ENTER);
+      } else {
+        await typeAiResponse(turn.text, TYPING_SPEED_AI);
+        await delay(DELAY_AFTER_AI);
+      }
+    }
+    if (story.outro) {
+      if (myId !== runId) return;
+      await delay(OUTRO_BEFORE);
+      await typeInInput(story.outro, OUTRO_TYPING_SPEED);
+      await delay(OUTRO_HOLD);
+    }
+    if (!LOOP) break;
+    await delay(DELAY_LOOP_RESTART);
+  }
+}
+
+// ============ UI配線 ============
+
+const dslEl = document.getElementById('dsl');
+const sampleSelect = document.getElementById('sampleSelect');
+const editorEl = document.getElementById('editor');
+
+// サンプルプルダウン構築
+Object.entries(SAMPLES).forEach(([key, { label }]) => {
+  const opt = document.createElement('option');
+  opt.value = key;
+  opt.textContent = label;
+  sampleSelect.appendChild(opt);
+});
+
+sampleSelect.addEventListener('change', () => {
+  const key = sampleSelect.value;
+  if (!key || !SAMPLES[key]) return;
+  dslEl.value = SAMPLES[key].dsl;
+  sampleSelect.value = '';
+});
+
+// 初期DSL = 1つ目のサンプル
+dslEl.value = SAMPLES['shinratsu-hayaoki'].dsl;
+
+// 再生
+document.getElementById('playBtn').addEventListener('click', () => {
+  const story = parseDSL(dslEl.value);
+  runConversation(story);
+});
+
+// コピー
+document.getElementById('copyBtn').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(dslEl.value);
+    const btn = document.getElementById('copyBtn');
+    const orig = btn.textContent;
+    btn.textContent = 'コピー済';
+    setTimeout(() => { btn.textContent = orig; }, 1200);
+  } catch (e) {
+    alert('コピーに失敗しました: ' + e.message);
+  }
+});
+
+// 隠す
+document.getElementById('hideBtn').addEventListener('click', () => {
+  editorEl.classList.add('hidden');
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'h' || e.key === 'H') editorEl.classList.toggle('hidden');
+});
+</script>
+
+</body>
+</html>
